@@ -1,53 +1,99 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"text/template"
+	"time"
 )
 
-func main() {
-	//if err := run(); err != nil {
-	//	log.Printf("Failed to generate file: %v", err)
-	//}
-	if len(os.Args) < 2 {
-		fmt.Println("Required args are missing.")
-		return
-	}
-	dirName := os.Args[1]
+const frontMatter = `---
+title: 
+description: 
+summary: 
+categories: [""]
+tags: [""]
+date: {{.Date}}
+lastmod: {{.LastMod}}
+slug: 
 
-	err := os.Mkdir(dirName, 0755)
+---`
+
+type Content struct {
+	WorkDir  string
+	DirNo    string
+	FileName string
+}
+
+func (ct *Content) MakeDir() error {
+	var dir = filepath.Join(ct.WorkDir, ct.DirNo)
+	err := os.Mkdir(dir, 0755)
 	if os.IsExist(err) {
-		fmt.Println("The directory already exists.")
+		return errors.New("the directory already exists")
+	} else if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ct *Content) CreateFile() error {
+	fp := filepath.Join(ct.WorkDir, ct.DirNo, ct.FileName)
+	md, err := os.Create(fp)
+	if err != nil {
+		return err
+	}
+	defer func(md *os.File) {
+		err := md.Close()
+		if err != nil {
+			fmt.Println(err)
+		}
+	}(md)
+
+	tmpl, err := template.New("").Parse(frontMatter)
+	if err != nil {
+		return err
+	}
+	n := time.Now().Format("2006-01-02 15:04:05")
+	fm := struct {
+		Date    string
+		LastMod string
+	}{
+		Date:    n,
+		LastMod: n,
+	}
+	if err := tmpl.Execute(md, fm); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func main() {
+	if len(os.Args) < 2 {
+		fmt.Println("Required args are missing")
 		return
 	}
+	wd, err := os.Getwd()
 	if err != nil {
-		fmt.Printf("Fail to mkdir: %v", err)
+		fmt.Printf("Fail to getwd: %v\n", err)
 		return
 	}
 
-	err = os.WriteFile(dirName+"/aaa.md", []byte("Hello, Gophers!"), 0644)
-	if err != nil {
-		fmt.Printf("Fail to mkdir: %v", err)
+	ct := &Content{
+		WorkDir:  wd,
+		DirNo:    os.Args[1],
+		FileName: "index.md",
+	}
+
+	if err := ct.MakeDir(); err != nil {
+		fmt.Printf("Fail to make dir: %v\n", err)
+		return
+	}
+
+	if err = ct.CreateFile(); err != nil {
+		fmt.Printf("Fail to create file: %v\n", err)
 		return
 	}
 }
-
-//var articleNum string
-//
-//func run() error {
-//	flag.StringVar(&articleNum, "n", "000", "Article number of the markdown file to be newly created")
-//
-//	if err := validateArgs(); err != nil {
-//		fmt.Fprintln(os.Stderr, err)
-//		os.Exit(1)
-//	}
-//
-//	flag.Parse()
-//	fmt.Printf("param -n : %s\n", articleNum)
-//
-//	return nil
-//}
-//
-//func validateArgs() error {
-//	return nil
-//}
