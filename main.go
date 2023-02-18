@@ -18,8 +18,10 @@ tags: [""]
 date: {{.Date}}
 lastmod: {{.LastMod}}
 slug: 
+---
 
----`
+
+` // Contains 2 blank lines
 
 type Content struct {
 	WorkDir  string
@@ -27,7 +29,7 @@ type Content struct {
 	FileName string
 }
 
-func (ct *Content) MakeDir() error {
+func (ct *Content) makeDir() error {
 	var dir = filepath.Join(ct.WorkDir, ct.DirNo)
 	err := os.Mkdir(dir, 0755)
 	if os.IsExist(err) {
@@ -38,7 +40,7 @@ func (ct *Content) MakeDir() error {
 	return nil
 }
 
-func (ct *Content) CreateFile() error {
+func (ct *Content) createMarkdown() error {
 	fp := filepath.Join(ct.WorkDir, ct.DirNo, ct.FileName)
 	md, err := os.Create(fp)
 	if err != nil {
@@ -66,7 +68,6 @@ func (ct *Content) CreateFile() error {
 	if err := tmpl.Execute(md, fm); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -87,13 +88,13 @@ func main() {
 		FileName: "index.md",
 	}
 
-	if err := ct.MakeDir(); err != nil {
+	if err := ct.makeDir(); err != nil {
 		fmt.Printf("Fail to make dir: %v\n", err)
 		return
 	}
 
-	if err = ct.CreateFile(); err != nil {
-		fmt.Printf("Fail to create file: %v\n", err)
+	if err = ct.createMarkdown(); err != nil {
+		fmt.Printf("Fail to create markdown file: %v\n", err)
 		return
 	}
 }
