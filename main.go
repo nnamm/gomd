@@ -1,5 +1,11 @@
 package main
 
+import (
+	"fmt"
+	"strconv"
+	"unicode/utf8"
+)
+
 const frontMatter = `---
 title: 
 description: 
@@ -20,26 +26,24 @@ type Source struct {
 	//FileName string
 }
 
-func (s *Source) setDirFormat(dirNo string) error {
-	//l := utf8.RuneCountInString(dirNo)
-	//if l != 3 {
-	//	return fmt.Errorf("DirNo must be 3-digits: %d", l)
-	//}
-	//for _, c := range dirNo {
-	//
-	//}
-	s.DirNo = dirNo
+func (s *Source) setDirNo(dirNo string) error {
+	l := utf8.RuneCountInString(dirNo)
+	if l > 3 {
+		return fmt.Errorf("DirNo must be under 3-digits: %d", l)
+	}
+
+	getint, err := strconv.Atoi(dirNo)
+	if err != nil {
+		return fmt.Errorf("DirNo must be all numeric: %v", err)
+	}
+
+	s.DirNo = fmt.Sprintf("%03d", getint)
 	return nil
 }
 
-//func setDirNumber() (string, error) {
-//  return "000", nil
-//}
-
-//func setContentData() (*Content, error) {
-//	var ct Content
-//	return &ct, nil
-//}
+func dateFormat() (string, error) {
+	return "_230201", nil
+}
 
 func main() {
 	//_, err := setContentData()

@@ -1,64 +1,75 @@
 package main
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+	"time"
+)
 
-func TestSource(t *testing.T) {
+func TestSetDirNo(t *testing.T) {
 	cases := map[string]struct {
-		dirNo   string
-		wantErr bool // true is a case in which an error occurs
+		in        string
+		want      string
+		expectErr bool
 	}{
-		"Length: 3": {"000", false},
+		"DirNo Length: 1":                  {"0", "000", false},
+		"DirNo Length: 2":                  {"00", "000", false},
+		"DirNo Length: 3":                  {"000", "000", false},
+		"DirNo Length: 4":                  {"0000", "", true},
+		"DirNo Length: 3 include alphabet": {"A00", "", true},
+		"DirNo Length: 3 include symbol":   {"00*", "", true},
 	}
 
 	for _, tt := range cases {
-		t.Run(tt.dirNo, func(t *testing.T) {
+		tt := tt
+		t.Run(tt.in, func(t *testing.T) {
+			t.Parallel()
 			s := Source{}
-			got := s.setDirFormat(tt.dirNo)
+			got := s.setDirNo(tt.in)
 
-			if tt.wantErr {
+			fmt.Println(tt.in)
+
+			if tt.expectErr {
 				if got == nil {
-					t.Errorf("")
+					t.Errorf("expectErr: %t, but actual: %v", tt.expectErr, got)
 				}
-			} else {
-				if tt.dirNo != s.DirNo {
-					t.Errorf("value to be set: %s, but actural: %s", tt.dirNo, s.DirNo)
-				}
+			}
+
+			if s.DirNo != tt.want {
+				t.Errorf("value to be set: %s, but actual: %s", tt.want, s.DirNo)
 			}
 		})
 	}
-	//	t.Run("Length:3", func(t *testing.T) {
-	//		s := Source{}
-	//		got := s.setDirFormat("000")
-	//
-	//		if got != nil {
-	//			t.Errorf("want nil, but got err: %v", got)
-	//		}
-	//	})
-	//
-	//t.Run("Length:2", func(t *testing.T) {
-	//	s := Source{}
-	//	got := s.setDirFormat("00")
-	//
-	//	if got != nil {
-	//		t.Errorf("want nil, but got err: %v", got)
-	//	}
-	//})
-	//
-	//t.Run("Length:4", func(t *testing.T) {
-	//	s := Source{}
-	//	got := s.setDirFormat("0000")
-	//
-	//	if got != nil {
-	//		t.Errorf("want nil, but got err: %v", got)
-	//	}
-	//})
-	//
-	//t.Run("Length:3 but NOT all are numbers", func(t *testing.T) {
-	//	s := Source{}
-	//	got := s.setDirFormat("0A0")
-	//
-	//	if got != nil {
-	//		t.Errorf("want nil, but got err: %v", got)
-	//	}
-	//})
+}
+
+func TestDateFormat(t *testing.T) {
+	cases := map[string]struct {
+		in        time.Time
+		want      string
+		expectErr bool
+	}{
+		"Today1": {time.Date(2023, time.February, 1, 0, 0, 0, 0, time.FixedZone("Asia/Tokyo", 9*60*60)), "_230201", false},
+	}
+
+	for _, tt := range cases {
+		tt := tt
+		t.Run(tt.in.String(), func(t *testing.T) {
+			t.Parallel()
+			got, err := dateFormat()
+
+			if tt.expectErr {
+				if err == nil {
+					t.Errorf("expectErr: %t, but actual err: %v", tt.expectErr, err)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("expectErr: %t, but actual err: %v", tt.expectErr, err)
+				}
+			}
+
+			if got != tt.want {
+				t.Errorf("value to be set: %s, but actual: %s", tt.want, got)
+			}
+		})
+	}
 }
