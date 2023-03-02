@@ -6,7 +6,7 @@ https://nnamm.work
 
 # TODO
 
-- [*] Argument number check (only 3-digit numbers allowed)
+- [x] Argument number check (only 3-digit numbers allowed)
 - [ ] Add date to directory name (XXX -> XXX_YYMMDD)
 - [ ] Make it work without argument
 - [ ] Testing practice
