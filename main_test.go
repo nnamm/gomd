@@ -1,12 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"testing"
-	"time"
+
+	"github.com/nnamm/gomd/clock"
 )
 
-func TestSetDirNo(t *testing.T) {
+func TestSetDirName(t *testing.T) {
 	cases := map[string]struct {
 		in        string
 		want      string
@@ -24,10 +24,8 @@ func TestSetDirNo(t *testing.T) {
 		tt := tt
 		t.Run(tt.in, func(t *testing.T) {
 			t.Parallel()
-			s := Source{}
-			got := s.setDirNo(tt.in)
-
-			fmt.Println(tt.in)
+			s := &source{}
+			got := s.setDirName(tt.in)
 
 			if tt.expectErr {
 				if got == nil {
@@ -35,40 +33,31 @@ func TestSetDirNo(t *testing.T) {
 				}
 			}
 
-			if s.DirNo != tt.want {
-				t.Errorf("value to be set: %s, but actual: %s", tt.want, s.DirNo)
+			if s.DirName != tt.want {
+				t.Errorf("value to be set: %s, but actual: %s", tt.want, s.DirName)
 			}
 		})
 	}
 }
 
-func TestDateFormat(t *testing.T) {
+func TestGetCurrentDate(t *testing.T) {
 	cases := map[string]struct {
-		in        time.Time
-		want      string
-		expectErr bool
+		in   clock.Clocker
+		want string
 	}{
-		"Today1": {time.Date(2023, time.February, 1, 0, 0, 0, 0, time.FixedZone("Asia/Tokyo", 9*60*60)), "_230201", false},
+		"NormalDate1": {clock.FixedClocker{}, "230210"},
 	}
 
 	for _, tt := range cases {
 		tt := tt
-		t.Run(tt.in.String(), func(t *testing.T) {
+		t.Run("", func(t *testing.T) {
 			t.Parallel()
-			got, err := dateFormat()
+			s := &source{}
+			d := date{clocker: tt.in}
+			s.getCurrentDate(d)
 
-			if tt.expectErr {
-				if err == nil {
-					t.Errorf("expectErr: %t, but actual err: %v", tt.expectErr, err)
-				}
-			} else {
-				if err != nil {
-					t.Errorf("expectErr: %t, but actual err: %v", tt.expectErr, err)
-				}
-			}
-
-			if got != tt.want {
-				t.Errorf("value to be set: %s, but actual: %s", tt.want, got)
+			if s.CurrentDate != tt.want {
+				t.Errorf("value to be set: %s, but actual: %s", tt.want, s.CurrentDate)
 			}
 		})
 	}

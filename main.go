@@ -2,8 +2,11 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"unicode/utf8"
+
+	"github.com/nnamm/gomd/clock"
 )
 
 const frontMatter = `---
@@ -12,7 +15,7 @@ description:
 summary: 
 categories: [""]
 tags: [""]
-date: {{.Date}}
+clock: {{.clock}}
 lastmod: {{.LastMod}}
 slug: 
 ---
@@ -20,13 +23,14 @@ slug:
 
 ` // Contains 2 blank lines
 
-type Source struct {
+type source struct {
 	//WorkDir  string
-	DirNo string
+	DirName     string
+	CurrentDate string
 	//FileName string
 }
 
-func (s *Source) setDirNo(dirNo string) error {
+func (s *source) setDirName(dirNo string) error {
 	l := utf8.RuneCountInString(dirNo)
 	if l > 3 {
 		return fmt.Errorf("DirNo must be under 3-digits: %d", l)
@@ -37,24 +41,31 @@ func (s *Source) setDirNo(dirNo string) error {
 		return fmt.Errorf("DirNo must be all numeric: %v", err)
 	}
 
-	s.DirNo = fmt.Sprintf("%03d", getint)
+	s.DirName = fmt.Sprintf("%03d", getint)
 	return nil
 }
 
-func dateFormat() (string, error) {
-	return "_230201", nil
+type date struct {
+	clocker clock.Clocker
+}
+
+func (s *source) getCurrentDate(d date) {
+	n := d.clocker.Now()
+	s.CurrentDate = n.Format("060102")
 }
 
 func main() {
-	//_, err := setContentData()
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
+	if len(os.Args) < 2 {
+		fmt.Println("Required args are missing")
+		return
+	}
 
-	//if len(os.Args) < 2 {
-	//  fmt.Println("Required args are missing")
-	//  return
-	//}
+	s := source{}
+	if err := s.setDirName(os.Args[1]); err != nil {
+		fmt.Printf("Error occurred: %v", err)
+	}
+
+	fmt.Println(s.DirName)
 
 	//wd, err := os.Getwd()
 	//if err != nil {
@@ -109,10 +120,10 @@ func main() {
 //  }
 //  n := time.Now().Format("2006-01-02 15:04:05")
 //  fm := struct {
-//      Date    string
+//      clock    string
 //      LastMod string
 //  }{
-//      Date:    n,
+//      clock:    n,
 //      LastMod: n,
 //  }
 //  if err := tmpl.Execute(md, fm); err != nil {
