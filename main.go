@@ -3,131 +3,71 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
-	"unicode/utf8"
-
-	"github.com/nnamm/gomd/clock"
+	"text/template"
+	"time"
 )
 
-const frontMatter = `---
+const (
+	mdTemplate = `---
 title: 
 description: 
 summary: 
 categories: [""]
 tags: [""]
-clock: {{.clock}}
-lastmod: {{.LastMod}}
+date: {{.Date}}
+lastmod: {{.Date}}
 slug: 
 ---
 
 
-` // Contains 2 blank lines
+`
+	dirFormat  = "060102"
+	dateFormat = "2006-01-02"
+)
 
-type source struct {
-	//WorkDir  string
-	DirName     string
-	CurrentDate string
-	//FileName string
-}
-
-func (s *source) setDirName(dirNo string) error {
-	l := utf8.RuneCountInString(dirNo)
-	if l > 3 {
-		return fmt.Errorf("DirNo must be under 3-digits: %d", l)
-	}
-
-	getint, err := strconv.Atoi(dirNo)
-	if err != nil {
-		return fmt.Errorf("DirNo must be all numeric: %v", err)
-	}
-
-	s.DirName = fmt.Sprintf("%03d", getint)
-	return nil
-}
-
-type date struct {
-	clocker clock.Clocker
-}
-
-func (s *source) getCurrentDate(d date) {
-	n := d.clocker.Now()
-	s.CurrentDate = n.Format("060102")
+type execDate struct {
+	Date string
 }
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Required args are missing")
-		return
+	args := os.Args
+	if len(args) != 2 {
+		fmt.Println("Error: Invalid number of arguments")
+		os.Exit(1)
 	}
 
-	s := source{}
-	if err := s.setDirName(os.Args[1]); err != nil {
-		fmt.Printf("Error occurred: %v", err)
+	num, err := strconv.Atoi(args[1])
+	if err != nil || num < 1 || num > 999 {
+		fmt.Println("Error: Argument is not a valid number between 1 to 999")
+		os.Exit(1)
 	}
 
-	fmt.Println(s.DirName)
+	now := time.Now()
+	dirName := fmt.Sprintf("%03d_%s", num, now.Format(dirFormat))
+	err = os.Mkdir(dirName, 0755)
+	if err != nil {
+		fmt.Println("Error: Failed to create directory")
+		os.Exit(1)
+	}
 
-	//wd, err := os.Getwd()
-	//if err != nil {
-	//  fmt.Printf("Fail to getwd: %v\n", err)
-	//  return
-	//}
-	//
-	//ct := &Content{
-	//  WorkDir:  wd,
-	//  DirNo:    os.Args[1],
-	//  FileName: "index.md",
-	//}
-	//
-	//if err := ct.makeDir(); err != nil {
-	//  fmt.Printf("Fail to make dir: %v\n", err)
-	//  return
-	//}
-	//
-	//if err = ct.createMarkdown(); err != nil {
-	//  fmt.Printf("Fail to create markdown file: %v\n", err)
-	//  return
-	//}
+	md, err := os.Create(filepath.Join(dirName, "index.md"))
+	if err != nil {
+		fmt.Println("Error: Failed to create markdown file")
+		os.Exit(1)
+	}
+	defer md.Close()
+
+	tmpl := template.Must(template.New("markdown").Parse(mdTemplate))
+	if err != nil {
+		fmt.Println("Error: Failed to parse template")
+		os.Exit(1)
+	}
+	ed := execDate{Date: now.Format(dateFormat)}
+	err = tmpl.Execute(md, ed)
+	if err != nil {
+		fmt.Println("Error: Failed to execute template")
+		os.Exit(1)
+	}
 }
-
-//func (ct *Content) makeDir() error {
-//  var dir = filepath.Join(ct.WorkDir, ct.DirNo)
-//  err := os.Mkdir(dir, 0755)
-//  if os.IsExist(err) {
-//      return errors.New("the directory already exists")
-//  } else if err != nil {
-//      return err
-//  }
-//  return nil
-//}
-//
-//func (ct *Content) createMarkdown() error {
-//  fp := filepath.Join(ct.WorkDir, ct.DirNo, ct.FileName)
-//  md, err := os.Create(fp)
-//  if err != nil {
-//      return err
-//  }
-//  defer func(md *os.File) {
-//      err := md.Close()
-//      if err != nil {
-//          fmt.Println(err)
-//      }
-//  }(md)
-//
-//  tmpl, err := template.New("").Parse(frontMatter)
-//  if err != nil {
-//      return err
-//  }
-//  n := time.Now().Format("2006-01-02 15:04:05")
-//  fm := struct {
-//      clock    string
-//      LastMod string
-//  }{
-//      clock:    n,
-//      LastMod: n,
-//  }
-//  if err := tmpl.Execute(md, fm); err != nil {
-//      return err
-//  }
-//  return nil
-//}
