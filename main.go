@@ -1,133 +1,112 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
-	"strconv"
-	"unicode/utf8"
-
-	"github.com/nnamm/gomd/clock"
+	"path/filepath"
+	"text/template"
+	"time"
 )
 
-const frontMatter = `---
+const (
+	mdTemplate = `---
 title: 
 description: 
 summary: 
 categories: [""]
 tags: [""]
-clock: {{.clock}}
-lastmod: {{.LastMod}}
+date: {{.Date}}
+lastmod: {{.Date}}
 slug: 
 ---
 
 
-` // Contains 2 blank lines
+`
+)
 
-type source struct {
-	//WorkDir  string
-	DirName     string
-	CurrentDate string
-	//FileName string
-}
-
-func (s *source) setDirName(dirNo string) error {
-	l := utf8.RuneCountInString(dirNo)
-	if l > 3 {
-		return fmt.Errorf("DirNo must be under 3-digits: %d", l)
-	}
-
-	getint, err := strconv.Atoi(dirNo)
-	if err != nil {
-		return fmt.Errorf("DirNo must be all numeric: %v", err)
-	}
-
-	s.DirName = fmt.Sprintf("%03d", getint)
-	return nil
-}
-
-type date struct {
-	clocker clock.Clocker
-}
-
-func (s *source) getCurrentDate(d date) {
-	n := d.clocker.Now()
-	s.CurrentDate = n.Format("060102")
-}
+var (
+	outputDir string
+	date      string
+)
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Required args are missing")
-		return
+	flag.Parse()
+	args := flag.Args()
+	if len(args) != 1 {
+		fmt.Println("Usage: gomd [1-3 digit number]")
+		os.Exit(1)
 	}
 
-	s := source{}
-	if err := s.setDirName(os.Args[1]); err != nil {
-		fmt.Printf("Error occurred: %v", err)
+	input := args[0]
+	if !isInvalidInput(input) {
+		fmt.Println("Invalid input. Please provide a valid 1-3 digit number.")
+		os.Exit(1)
 	}
 
-	fmt.Println(s.DirName)
+	outputDir = generateOutputDir(input)
+	date = getCurrentDate()
 
-	//wd, err := os.Getwd()
-	//if err != nil {
-	//  fmt.Printf("Fail to getwd: %v\n", err)
-	//  return
-	//}
-	//
-	//ct := &Content{
-	//  WorkDir:  wd,
-	//  DirNo:    os.Args[1],
-	//  FileName: "index.md",
-	//}
-	//
-	//if err := ct.makeDir(); err != nil {
-	//  fmt.Printf("Fail to make dir: %v\n", err)
-	//  return
-	//}
-	//
-	//if err = ct.createMarkdown(); err != nil {
-	//  fmt.Printf("Fail to create markdown file: %v\n", err)
-	//  return
-	//}
+	err := createDirectory(outputDir)
+	if err != nil {
+		fmt.Println("Error: Failed to create directory: ", err)
+	}
+
+	err = createMarkdownFile()
+	if err != nil {
+		fmt.Println("Error: Failed to create markdown file: ", err)
+		os.Exit(1)
+	}
 }
 
-//func (ct *Content) makeDir() error {
-//  var dir = filepath.Join(ct.WorkDir, ct.DirNo)
-//  err := os.Mkdir(dir, 0755)
-//  if os.IsExist(err) {
-//      return errors.New("the directory already exists")
-//  } else if err != nil {
-//      return err
-//  }
-//  return nil
-//}
-//
-//func (ct *Content) createMarkdown() error {
-//  fp := filepath.Join(ct.WorkDir, ct.DirNo, ct.FileName)
-//  md, err := os.Create(fp)
-//  if err != nil {
-//      return err
-//  }
-//  defer func(md *os.File) {
-//      err := md.Close()
-//      if err != nil {
-//          fmt.Println(err)
-//      }
-//  }(md)
-//
-//  tmpl, err := template.New("").Parse(frontMatter)
-//  if err != nil {
-//      return err
-//  }
-//  n := time.Now().Format("2006-01-02 15:04:05")
-//  fm := struct {
-//      clock    string
-//      LastMod string
-//  }{
-//      clock:    n,
-//      LastMod: n,
-//  }
-//  if err := tmpl.Execute(md, fm); err != nil {
-//      return err
-//  }
-//  return nil
-//}
+func isInvalidInput(input string) bool {
+	if len(input) < 1 || len(input) > 3 {
+		return false
+	}
+	for _, c := range input {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func generateOutputDir(input string) string {
+	t := time.Now()
+	year, month, day := t.Date()
+	yearStr := fmt.Sprintf("%02d", year%100)
+	return fmt.Sprintf("%03s_%02s%02d%02d", input, yearStr, month, day)
+}
+
+func getCurrentDate() string {
+	return time.Now().Format("2006-01-02")
+}
+
+func createDirectory(dirName string) error {
+	return os.MkdirAll(dirName, 0755)
+}
+
+func createMarkdownFile() error {
+	tmpl, err := template.New("markdown").Parse(mdTemplate)
+	if err != nil {
+		return err
+	}
+
+	fileName := filepath.Join(outputDir, "index.md")
+	file, err := os.Create(fileName)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	data := struct {
+		Date string
+	}{Date: date}
+
+	err = tmpl.Execute(file, data)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
