@@ -9,7 +9,7 @@ import (
 
 func main() {
 	if len(os.Args) != 2 {
-		fmt.Println("Expected a single argument")
+		fmt.Println("expected a single argument")
 		return
 	}
 
